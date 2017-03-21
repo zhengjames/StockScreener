@@ -16,18 +16,21 @@ class Macd:
         """when index is window - 1 which is the
             beginning of the serie we have to use simple moving average
             value[window-1] is the first value"""
-        index = 0
+        descending_index = 0
         result = list()
 
         final_result_size = len(values) - window + 1
-        result.append(self.calc_simple_moving_average(values[0:window], window)[0])
-
-        """iterate from current value index till the end"""
-        for i in range(window, len(values)):
+        # calculate from the tail to the head
+        result.insert(0, self.calc_simple_moving_average(
+            values[len(values) - window :len(values)], window)[0])
+        """given oct,sept,aug,jul,jun,may,apr we calculate from tail the oldest data to newest
+            if window is three we calculate average jun,may,apr then next one will include jul...
+            until reaches the head"""
+        """calculate backward from tail to head new final values are inserted to position 0"""
+        for i in reversed(range(0, len(values) - window)):
             """last element of the results"""
-            previous_ema = result[len(result) - 1]
-            result.append((values[i] - previous_ema) * (2/(window + 1))
-                          + previous_ema)
+            most_recent_ema = result[0]
+            result.insert(0, (values[i] - most_recent_ema) * (2/(window + 1))+ most_recent_ema)
 
         return result
 
@@ -42,18 +45,18 @@ class Macd:
         long_ema = np.array(long_ema)
         short_ema = np.array(short_ema)
 
-        macd_ema = short_ema[diff_window:] - long_ema
+        macd_ema = short_ema[:len(short_ema)-diff_window] - long_ema
         signal_sma = np.array(self.calc_simple_moving_average(macd_ema, macd_window))
 
         """add padding to make all same length"""
         padding = np.empty(len(values) - len(macd_ema)) * np.nan
-        macd_ema = np.concatenate([padding, macd_ema])
+        macd_ema = np.concatenate([macd_ema, padding])
         padding = np.empty(len(values) - len(signal_sma)) * np.nan
-        signal_sma = np.concatenate([padding, signal_sma])
+        signal_sma = np.concatenate([signal_sma, padding])
         padding = np.empty(len(values) - len(long_ema)) * np.nan
-        long_ema = np.concatenate([padding, long_ema])
+        long_ema = np.concatenate([long_ema,padding])
         padding = np.empty(len(values) - len(short_ema)) * np.nan
-        short_ema = np.concatenate([padding, short_ema])
+        short_ema = np.concatenate([short_ema,padding])
         center_line = macd_ema - signal_sma
 
         return pd.concat([
