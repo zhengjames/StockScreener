@@ -1,4 +1,4 @@
-from TechnicalIndicators import Macd
+from TechnicalAlgorithms import Macd
 
 
 my_macd = Macd([1,2,3])

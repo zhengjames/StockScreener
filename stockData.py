@@ -1,6 +1,6 @@
 import csv
 import pandas as pd
-from TechnicalIndicators import Macd
+from TechnicalAlgorithms import Macd
 
 class StockData:
 
