@@ -44,7 +44,7 @@ class Macd(Calculator):
         self.fastEma = 12
         self.macdEma = 9
 
-    def calc_macd(self, data_frame, longer_window = 26, shorter_window = 12, macd_window = 9):
+    def calculate(self, data_frame, longer_window = 26, shorter_window = 12, macd_window = 9):
         values = data_frame['Close']
         long_ema = self.calc_exponential_moving_average(values, longer_window)
         short_ema = self.calc_exponential_moving_average(values, shorter_window)
@@ -110,12 +110,12 @@ class DataParser:
 
 
 class StochasticOscillator(Calculator):
+    #returns {[K][K_MA_3]}
     def calculate(self, data_frame, look_back_period = 14, sma_period = 3):
         k_array = np.empty(len(data_frame.index)) * np.nan
 
         index = len(data_frame) - look_back_period
         #calculate the stochastic point
-        #add one element to make 14 elements then calculate
         #iterate through data from last element(oldest) to most recent
         while (index >= 0):
             #14 elements
