@@ -17,7 +17,7 @@ class MacdScreener:
 
     def screen(self, data):
         try:
-            print("Begin calculating MACD")
+            print("Begin MACD")
             results = self.calculator.calculate(data_frame=data)
         except Exception as e:
             print("Does not have sufficient historical"
@@ -40,17 +40,28 @@ class MacdScreener:
         y_array = np.linspace(start=len(latestIndex), stop=1, num=len(latestIndex), dtype=int)
         data_frame = pd.concat([pd.DataFrame({'x': latestIndex.center_line}), pd.DataFrame({'y': y_array})], axis=1)
         forcaster = ta.ForcastAlgorithms()
-        days = forcaster.predict_cross_above_zero_macd(data_frame)
+
+        #macd was crossed today, so sign of delta yesterday and today is different
+        if 0 == self.trigger_in_n_days:
+            days = forcaster.predict_just_crossed_zero_macd(data, self.trigger_direction)
+            if days == 0:
+                return {"pass":True, "prediction":0}
+
+        if "ABOVE" == self.trigger_direction:
+            days = forcaster.predict_cross_above_zero_macd(data_frame)
+        else:
+            days = forcaster.predict_cross_below_zero_macd(data_frame)
+
         if ta.INVALID_PREDICTION or days > self.trigger_in_n_days:
-            print("MACD fast MA breaching slow MA is not likely to happen or beyond filter setting")
+            print("MACD fast MA breaching slow MA is not likely to happen")
         else:
             print("MACD fast MA will breach"
                   " slow MA in {} days".format(days))
 
         if days != ta.INVALID_PREDICTION:
-            return [True, days]
+            return {"pass":True, "prediction":days}
         else:
-            return [False, ta.INVALID_PREDICTION]
+            return {"pass":False, "prediction":ta.INVALID_PREDICTION}
 
 class StochasticScreener:
     #{
@@ -76,6 +87,6 @@ class StochasticScreener:
         if self.lower_bound <= k_df.K_MA_3[0] <= self.upper_bound:
             return [True, k_df.K_MA_3[0]]
         else:
-            return [False, ta.INVALID_PREDICTION]
+            return {"Pass":False, "Prediction":ta.INVALID_PREDICTION}
 
 
