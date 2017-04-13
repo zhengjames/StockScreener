@@ -8,5 +8,10 @@ class RequestHandler:
 
     def get_response(self, ticker):
         response = requests.get(self.url_template.substitute(TICKER = ticker))
+        if 200 != response.status_code:
+            raise Exception('failed response from yahoo response status code {}'
+                            .format(response.status_code))
+
+
 
         return response

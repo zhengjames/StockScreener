@@ -83,10 +83,13 @@ class StochasticScreener:
 
 
     def screen(self, data):
+        print("Begin Stochastic Oscillator")
         k_df = self.calculator.calculate(data)
         if self.lower_bound <= k_df.K_MA_3[0] <= self.upper_bound:
-            return [True, k_df.K_MA_3[0]]
+            print("meets required condition")
+            return {"pass": True, "current_value": k_df.K_MA_3[0]}
         else:
-            return {"Pass":False, "Prediction":ta.INVALID_PREDICTION}
+            print("fails to meet required condition")
+            return {"pass":False, "current_value":k_df.K_MA_3[0]}
 
 

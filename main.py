@@ -1,6 +1,6 @@
 from simpleRequest import RequestHandler
 from stockData import StockData
-from TechnicalScreener import *
+from TechnicalScreener import MacdScreener
 import json
 import pandas as pd
 

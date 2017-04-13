@@ -1,9 +1,28 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as pit
-import heapq as heapq
-import queue as q
+from TechnicalScreener import *
+
 INVALID_PREDICTION = 9999
+
+class ScreenerFactory:
+
+    def create_screener(self, json):
+        if "MACD" == json["__type__"]:
+            return self.create_macd(json)
+        elif "STOCHASTIC_OSCILLATOR" == json["__type__"]:
+            return self.create_stochastic_oscillator(json)
+        else:
+            return
+
+    def create_macd(self, json):
+        return MacdScreener(json)
+    def create_stochastic_oscillator(self, json):
+        return StochasticScreener(json)
+
+
+
+
+
 class Calculator:
 
     def calc_simple_moving_average(self, values, window):
@@ -145,7 +164,7 @@ class ForcastAlgorithms:
 
     """
     def predict_cross_above_zero_macd(self, data_frame, num_previous_data = 2):
-
+        print("Begin predict cross above zero")
         #we are checking for breaking above zero so most recent data should be negative
         #if positive it already break above zero
         if data_frame.x[0] > 0:
@@ -189,8 +208,69 @@ class ForcastAlgorithms:
         return abs(calculator(0) - y[0])
 
 
+    def predict_cross_below_zero_macd(self, data_frame, num_previous_data = 2):
+        print("Begin predict cross below zero")
+        #we are checking for breaking below zero so most recent data should be positive
+        #if negative it already break below zero
+        if data_frame.x[0] < 0:
+            return INVALID_PREDICTION
+        elif data_frame.x[0] == 0:
+            return 0
+
+        #predict using the last 2 points by default
+
+        if num_previous_data < 2:
+            num_previous_data = 2
+
+        x = data_frame.x[:num_previous_data]
+        y = data_frame.y[:num_previous_data]
+
+        # find longest descending value that is equal or fewer than num_previous_data
+        # this ensures a proper fit for 1 degree linear fit
+        for i in range(1, num_previous_data):
+            #breaks descending order
+            recent_point = data_frame.x[i - 1]
+            old_point = data_frame.x[i]
+
+            #both should be negative
+            if recent_point <= 0 or old_point <= 0:
+                return INVALID_PREDICTION
+            #more recent points should be reaching toward 0
+            if not self.a_closer_to_zero_than_b(recent_point, old_point):
+                if i == 1:
+                    return INVALID_PREDICTION
+                #this is the cutoff segment used for fitting
+                x = data_frame.x[:i]
+                y = data_frame.y[:i]
 
 
+        # now x and y should have at least len of 2, min num data required to predict
+        poly_coefficients = np.polyfit(x, y, 1)
+        #store formula in calculator so we can just call it to predict
+        calculator = np.poly1d(poly_coefficients)
+
+        #number days until break above zero
+        return abs(calculator(0) - y[0])
+    #returns 0 if just crossed
+    def predict_just_crossed_zero_macd(self, data_frame, direction="BOTH"):
+        print("Begin predict just cross zero")
+        if "BOTH" == direction:
+            #yesterday and today's signs are different
+            if data_frame.x[1] * data_frame.x[0] < 0:
+                return 0
+            else:
+                return INVALID_PREDICTION
+        elif "ABOVE" == direction:
+            if data_frame.x[1] <= 0 and data_frame.x[0] >= 0:
+                return 0
+            else:
+                return INVALID_PREDICTION
+        #direction must be ABOVE
+        else:
+            if data_frame.x[1] >= 0 and data_frame.x[0] <= 0:
+                return 0
+            else:
+                return INVALID_PREDICTION
 
 
 
