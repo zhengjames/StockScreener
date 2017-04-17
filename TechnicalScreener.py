@@ -1,6 +1,22 @@
 import TechnicalAlgorithms as ta
 import numpy as np
 import pandas as pd
+
+class ScreenerFactory:
+
+    def create_screener(self, json):
+        if "MACD" == json["__type__"]:
+            return self.create_macd(json)
+        elif "STOCHASTIC_OSCILLATOR" == json["__type__"]:
+            return self.create_stochastic_oscillator(json)
+        else:
+            return
+
+    def create_macd(self, json):
+        return MacdScreener(json)
+    def create_stochastic_oscillator(self, json):
+        return StochasticScreener(json)
+
 class MacdScreener:
     #{"__type__": "MACD_SCREENER",
     #"trigger_cause": "FAST_SLOW_MA_CROSS",
@@ -85,11 +101,15 @@ class StochasticScreener:
     def screen(self, data):
         print("Begin Stochastic Oscillator")
         k_df = self.calculator.calculate(data)
+        currentValue = k_df.K_MA_3[0]
+        #check if it is nan
+        currentValue = 'nan' if currentValue != currentValue else currentValue
+
         if self.lower_bound <= k_df.K_MA_3[0] <= self.upper_bound:
             print("meets required condition")
-            return {"pass": True, "current_value": k_df.K_MA_3[0]}
+            return {"pass": True, "current_value": currentValue}
         else:
             print("fails to meet required condition")
-            return {"pass":False, "current_value":k_df.K_MA_3[0]}
+            return {"pass":False, "current_value":currentValue}
 
 

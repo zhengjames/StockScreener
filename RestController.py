@@ -2,14 +2,25 @@ from bottle import request, response, post, get, run
 from TechnicalAlgorithms import *
 from simpleRequest import RequestHandler
 from stockData import StockData
-from TechnicalScreener import *
-
+import json
+import numpy as np
 request_handler = RequestHandler()
 screener_factory = ScreenerFactory()
 
 
+class ComplexEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, float) and obj != obj:
+            return "nan"
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
+    pass
+
+
 @post('/names')
 def screen_stock():
+
+    customEncoder = ComplexEncoder()
     '''Handles name creation'''
     screener_json_arr = request.json["screener_arr"]
     ticker_arr = request.json["tickers_arr"]
@@ -39,7 +50,7 @@ def screen_stock():
 
 
     response.content_type = 'application/json'
-    return dict(result)
+    return json.dumps(dict(result))
 
 
 run(server='gunicorn', host='localhost', port=8080, debug=True, timeout=9999)

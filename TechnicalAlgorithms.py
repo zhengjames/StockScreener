@@ -1,27 +1,8 @@
 import numpy as np
 import pandas as pd
-from TechnicalScreener import *
+import queue as queue
 
 INVALID_PREDICTION = 9999
-
-class ScreenerFactory:
-
-    def create_screener(self, json):
-        if "MACD" == json["__type__"]:
-            return self.create_macd(json)
-        elif "STOCHASTIC_OSCILLATOR" == json["__type__"]:
-            return self.create_stochastic_oscillator(json)
-        else:
-            return
-
-    def create_macd(self, json):
-        return MacdScreener(json)
-    def create_stochastic_oscillator(self, json):
-        return StochasticScreener(json)
-
-
-
-
 
 class Calculator:
 
@@ -151,6 +132,84 @@ class StochasticOscillator(Calculator):
 
         k_array_sma = self.calc_simple_moving_average(k_array, 3)
         return pd.concat([pd.DataFrame({"K":k_array}), pd.DataFrame({"K_MA_3":k_array_sma})], axis=1)
+
+#http://cns.bu.edu/~gsc/CN710/fincast/Technical%20_indicators/Relative%20Strength%20Index%20(RSI).htm
+class RSI(Calculator):
+    def calculate(self, data_frame, look_back_period = 14):
+        closed_price = data_frame.Close
+        #queue max size 14
+        gain_loss_queue = queue.Queue(look_back_period)
+
+        gain_loss_array = np.empty(len(data_frame)) * np.nan
+
+        #cannot calculate gain or loss from the ipo date, first date therefore start with len()-1
+        #index goes from back of array to front of array
+        #if len is 5 (0,1,2,3,4) you want calculate (3,2,1,0) so 5 - 2
+        for i in reversed(range(0, len(closed_price) - 1)):
+            #today minus yesterday
+            difference = closed_price[i] - closed_price[i+1]
+            gain_loss_array[i] = difference
+
+
+        #queue max size 14
+        gain_loss_queue = queue.Queue(look_back_period)
+        total_gain = 0
+        total_loss = 0
+
+        #find the average for the first set
+        #First Average Gain = Sum of Gains over the past 14 periods / 14.
+        #if len of array is 5 (0,1,2,3,4) start with index 3
+        for i in range(2, look_back_period + 2):
+            value = gain_loss_array[len(gain_loss_array) - i]
+            gain_loss_queue.put(value)
+            if value > 0 :
+                total_gain += value
+            elif value < 0:
+                total_loss -= value
+
+
+        avg_gain_list = np.empty(len(data_frame)) * np.nan
+        avg_loss_list = np.empty(len(data_frame)) * np.nan
+        RS_list = np.empty(len(data_frame)) * np.nan
+        RSI_list = np.empty(len(data_frame)) * np.nan
+        #fill first set of values
+        avg_gain_loss_index = len(data_frame) - look_back_period - 1
+        avg_gain_list[avg_gain_loss_index] = total_gain / look_back_period
+        avg_loss_list[avg_gain_loss_index] = abs(total_loss / look_back_period)
+        RS_list[avg_gain_loss_index] = avg_gain_list[avg_gain_loss_index] / avg_loss_list[avg_gain_loss_index]
+        RSI_list[avg_gain_loss_index] = 100 - (100 / (1 + RS_list[avg_gain_loss_index]))
+        avg_gain_loss_index -= 1
+        #--end first set calculation
+
+        #find second and remaining average
+        #Average Gain = [(previous Average Gain) x 13 + current Gain] / 14.
+        #start filling array from the back
+        while (avg_gain_loss_index >= 0):
+            current_value = gain_loss_array[avg_gain_loss_index]
+            current_gain = 0
+            current_loss = 0
+            if current_value > 0:
+                current_gain = current_value
+            elif current_value < 0:
+                current_loss = current_value
+
+            #recalculate average
+            previous_avg_gain = avg_gain_list[avg_gain_loss_index + 1]
+            previous_avg_loss = avg_loss_list[avg_gain_loss_index + 1]
+            avg_gain_list[avg_gain_loss_index] = (previous_avg_gain * 13 + current_gain) / look_back_period
+            avg_loss_list[avg_gain_loss_index] = (previous_avg_loss * 13 + abs(current_loss)) / look_back_period
+            RS_list[avg_gain_loss_index] = avg_gain_list[avg_gain_loss_index] / avg_loss_list[avg_gain_loss_index]
+            RSI_list[avg_gain_loss_index] = 100 - (100 / (1 + RS_list[avg_gain_loss_index]))
+            avg_gain_loss_index -= 1
+
+
+        return pd.concat([
+            pd.DataFrame({'date' : data_frame['Date']}),
+            pd.DataFrame({'avg_gain_list' : avg_gain_list}),
+            pd.DataFrame({'avg_loss_list' : avg_loss_list}),
+            pd.DataFrame({'RS': RS_list}),
+            pd.DataFrame({'RSI': RSI_list})], axis = 1);
+
 
 class ForcastAlgorithms:
 
