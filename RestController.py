@@ -1,12 +1,12 @@
 import bottle
 from bottle import request, response, post, get, run, hook, app, Bottle
 from TechnicalScreener import *
-from simpleRequest import RequestHandler
+from simpleRequest import QuandlRequest
 from stockData import StockData
 import json
 import traceback
 import numpy as np
-request_handler = RequestHandler()
+request_handler = QuandlRequest()
 screener_factory = ScreenerFactory()
 app = bottle.app()
 
@@ -97,6 +97,5 @@ def add_cors_headers():
         'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
 
 app = bottle.app()
-# app.install(EnableCors())
 app.run(port=8070)
 # run(server='gunicorn', host='localhost', port=8070, debug=True, timeout=9999)

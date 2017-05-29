@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 import queue as queue
+import scipy.optimize as scopt
+import matplotlib.pyplot as plt
+
 
 INVALID_PREDICTION = 9999
 
@@ -274,7 +277,7 @@ class ForcastAlgorithms:
         data_frame.y contains the index 0,1,2,3..
 
     """
-    def predict_cross_above_zero_macd(self, data_frame, num_previous_data = 2):
+    def predict_cross_above_zero_macd(self, data_frame, num_previous_data = 2, algorithm = 'LINEAR'):
         print("Begin predict cross above zero")
         #we are checking for breaking above zero so most recent data should be negative
         #if positive it already break above zero
@@ -306,6 +309,12 @@ class ForcastAlgorithms:
 
         # now x and y should have at least len of 2, min num data required to predict
         poly_coefficients = np.polyfit(x, y, 1)
+
+        #=======test======
+        self.linear_regression(x, y)
+        self.exponential_regression(x, y)
+
+
         #store formula in calculator so we can just call it to predict
         calculator = np.poly1d(poly_coefficients)
 
@@ -376,6 +385,34 @@ class ForcastAlgorithms:
                 return 0
             else:
                 return INVALID_PREDICTION
+
+    def linear_regression(self, x, y):
+        poly_coefficients = np.polyfit(x, y, 1)
+        #store formula in calculator so we can just call it to predict
+        calculator = np.poly1d(poly_coefficients)
+        testX = np.append(x, 0)
+
+        plt.figure()
+        plt.title("Linear Regression")
+        plt.plot(x, y, 'ko', label="Original data")
+        plt.plot(testX, calculator(testX), 'r-', label="Fitted Curve")
+        plt.legend()
+        plt.show()
+
+    def exponential_regression(self, x, y):
+
+        popt, pcov = scopt.curve_fit(self.expFunc, x, y)
+        testX = np.append(x, 0)
+        plt.figure()
+        plt.title("Exponential Regression")
+        plt.plot(x, y, 'ko', label="Original data")
+        plt.plot(testX, self.expFunc(testX, *popt), 'r-', label="Fitted Curve")
+        plt.legend()
+        plt.show()
+
+    def expFunc(self, x, a, b):
+        return a * np.exp(b * x)
+
 
 
 

@@ -91,6 +91,7 @@ class StochasticScreener:
     # json_data["trigger_direction"] = "BETWEEN"
     # json_data["upper_bound"] = 20
     # json_data["lower_bound"] = 0
+    # json_data["bound"] = 10 optional
     #}
 
     def __init__(self, json):
@@ -99,6 +100,8 @@ class StochasticScreener:
         self.trigger_direction = json["trigger_direction"]
         self.upper_bound = json["upper_bound"]
         self.lower_bound = json["lower_bound"]
+        if "bound" in json:
+            self.bound = json["bound"]
         if self.__type__ == "STOCHASTIC_OSCILLATOR":
             self.calculator = ta.StochasticOscillator()
         elif self.__type__ == "STOCHASTIC_OSCILLATOR_RSI":
@@ -107,7 +110,7 @@ class StochasticScreener:
 
 
     def screen(self, data):
-        print("Begin Stochastic Oscillator")
+        print("Begin {}".format(self.__type__))
         k_df = self.calculator.calculate(data)
 
         currentValue = k_df.K_MA_3[0]

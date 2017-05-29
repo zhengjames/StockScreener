@@ -20,7 +20,7 @@ class StockData:
         headers = self.data[0]
         del self.data[0]
         self.data_frame = pd.DataFrame(self.data, columns=headers)
-        self.data_frame[['Open', 'High', 'Low', 'Close', 'Volume','Adj Close']] = \
-            self.data_frame[['Open', 'High', 'Low', 'Close', 'Volume', 'Adj Close']].apply(pd.to_numeric)
+        self.data_frame[['Open', 'High', 'Low', 'Close', 'Volume','Adj. Close']] = \
+            self.data_frame[['Open', 'High', 'Low', 'Close', 'Volume', 'Adj. Close']].apply(pd.to_numeric)
 
 
