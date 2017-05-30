@@ -3,7 +3,8 @@ import pandas as pd
 import queue as queue
 import scipy.optimize as scopt
 import matplotlib.pyplot as plt
-
+from Utilities import AllConstants as CONSTANT
+from Utilities import DataPrepUtil
 
 INVALID_PREDICTION = 9999
 
@@ -268,52 +269,22 @@ class RSI(Calculator):
 
 class ForcastAlgorithms:
 
-    #assumes both are negative values
-    def a_closer_to_zero_than_b(self, a, b):
-        return a > b
-
     """
         data_frame.x contains the macd difference
         data_frame.y contains the index 0,1,2,3..
-
     """
-    def predict_cross_above_zero_macd(self, data_frame, num_previous_data = 2, algorithm = 'LINEAR'):
-        print("Begin predict cross above zero")
-        #we are checking for breaking above zero so most recent data should be negative
-        #if positive it already break above zero
-        if data_frame.x[0] > 0 or len(data_frame) < 4:
+    def predict_cross_zero_macd(self, data_frame, min_num_previous_data = 2, trigger_direction=CONSTANT.ABOVE, algorithm ='LINEAR'):
+        print("Begin predict cross {} zero", trigger_direction)
+
+        pattern_to_prepare = CONSTANT.ASCENDING if trigger_direction == CONSTANT.ABOVE else CONSTANT.DESCENDING
+
+        x,y = DataPrepUtil.extract_most_recent_asc_desc_xy(
+            data_frame, min_num_previous_data=min_num_previous_data, pattern=pattern_to_prepare)
+        # if either x or y is empty
+        if len(x) == 0 or len(y) == 0:
             return INVALID_PREDICTION
-        elif data_frame.x[0] == 0:
-            return 0
-
-        # find longest descending value that is equal or fewer than num_previous_data
-        # this ensures a proper fit for 1 degree linear fit
-        for i in range(1, len(data_frame)):
-            #breaks descending order
-            recent_point = data_frame.x[i - 1]
-            old_point = data_frame.x[i]
-
-            #both should be negative
-            if recent_point >= 0 or old_point >= 0:
-                return INVALID_PREDICTION
-            #more recent points should be reaching toward 0
-            if not self.a_closer_to_zero_than_b(recent_point, old_point):
-                if i == 1:
-                    return INVALID_PREDICTION
-                #this is the cutoff segment used for fitting
-                x = data_frame.x[:i]
-                y = data_frame.y[:i]
-                break
-
-
-
         # now x and y should have at least len of 2, min num data required to predict
         poly_coefficients = np.polyfit(x, y, 1)
-
-        #=======test======
-        self.linear_regression(x, y)
-        self.exponential_regression(x, y)
-
 
         #store formula in calculator so we can just call it to predict
         calculator = np.poly1d(poly_coefficients)

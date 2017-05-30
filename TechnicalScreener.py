@@ -1,6 +1,7 @@
 import TechnicalAlgorithms as ta
 import numpy as np
 import pandas as pd
+from Utilities import AllConstants as CONSTANT
 
 class ScreenerFactory:
 
@@ -68,10 +69,8 @@ class MacdScreener:
             if days == 0:
                 return {"pass":True, "prediction":0}
 
-        if "ABOVE" == self.trigger_direction:
-            days = forcaster.predict_cross_above_zero_macd(data_frame)
-        else:
-            days = forcaster.predict_cross_below_zero_macd(data_frame)
+        days = forcaster.predict_cross_zero_macd(data_frame, trigger_direction=self.trigger_direction)
+
 
         if days == ta.INVALID_PREDICTION or days > self.trigger_in_n_days:
             print("MACD fast MA breaching slow MA is not likely to happen")
