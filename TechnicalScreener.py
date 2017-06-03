@@ -2,35 +2,73 @@ import TechnicalAlgorithms as ta
 import numpy as np
 import pandas as pd
 from Utilities import AllConstants as CONSTANT
+import logging
 
 class ScreenerFactory:
 
     def create_screener(self, json):
-        if "MACD" == json["__type__"]:
+        if "MACD" == json.get("__type__"):
             return self.create_macd(json)
-        elif "STOCHASTIC" in json["__type__"]:
+        elif "STOCHASTIC_OSCILLATOR" == json.get("__type__"):
             return self.create_stochastic_oscillator(json)
-        else:
-            return
+
 
     def create_macd(self, json):
-        return MacdScreener(json)
+        # {"__type__": "MACD_SCREENER",
+        # "trigger_cause": "FAST_SLOW_MA_CROSS",
+        # "trigger_direction": "ABOVE", "BELOW"
+        # "trigger_in_n_days":
+        # "trigger_target": 0
+        # }
+        macd = MacdScreener()
+        macd.__type__ = json.get("__type__")
+        macd.trigger_cause = json.get("trigger_cause")
+        macd.trigger_direction = json.get("trigger_direction")
+        macd.trigger_in_n_days = json.get("trigger_in_n_days")
+        macd.trigger_target = json.get("trigger_target")
+        macd.calculator = ta.Macd()
+        macd.data_parser = ta.DataParser()
+        return macd
+
     def create_stochastic_oscillator(self, json):
-        return StochasticScreener(json)
+        '''
+        :param json:
+         {
+            "__type__": "STOCHASTIC_OSCILLATOR_RSI",
+            "__subtype__": RSI
+            "trigger_cause": "SLOW_MA",
+            "trigger_direction": "BETWEEN",
+            "upper_bound": 25,
+            "lower_bound": 0,
+            "trigger_cause": "FAST_SLOW_MA_CROSS", `
+            "trigger_direction": "ABOVE", "BELOW" `
+            "trigger_in_n_days": `
+        },
+        :return:
+        '''
+
+        oscillator = StochasticScreener()
+        oscillator.__type__ = json.get("__type__"),
+        oscillator.trigger_cause = json.get("trigger_cause")
+        #plain old oscillator no prediction
+        if oscillator.trigger_direction == CONSTANT.BETWEEN:
+            oscillator.upper_bound = json.get("upper_bound")
+            oscillator.lower_bound = json.get("lower_bound")
+        else:
+            oscillator.trigger_direction = json.get("trigger_direction")
+            oscillator.trigger_in_n_days = json("trigger_in_n_days")
+            oscillator.trigger_target = json("trigger_target")
+
+        #insert the type of calculator
+        oscillator.__subtype__ = json.get("__subtype__")
+        if "RSI" == self.__subtype__:
+            self.calculator = ta.RSI()
+        else:
+            self.calculator = ta.StochasticOscillator()
+
+
 
 class MacdScreener:
-    #{"__type__": "MACD_SCREENER",
-    #"trigger_cause": "FAST_SLOW_MA_CROSS",
-    #"trigger_direction": "ABOVE", "BELOW", "BETWEEN"
-    #"trigger_in_n_days":
-    #}
-    def __init__(self, json):
-        self.__type__ = json["__type__"],
-        self.trigger_cause = json["trigger_cause"]
-        self.trigger_direction = json["trigger_direction"]
-        self.trigger_in_n_days = json["trigger_in_n_days"]
-        self.calculator = ta.Macd()
-        self.data_parser = ta.DataParser()
 
     def extract_most_recent_segment(self, data_frame):
         i = 0
@@ -42,19 +80,19 @@ class MacdScreener:
 
     def screen(self, data):
         try:
-            print("Begin MACD")
+            logging.info("Begin MACD screening")
             result_df = self.calculator.calculate(data_frame=data)
         except Exception as e:
-            print("Does not have sufficient historical"
-                  " data points to calculate MACD")
+            logging.error("Does not have sufficient historical"
+                          " data points to calculate MACD")
             raise e
 
         try:
-            print("Begin parsing MACD")
-            segment_tuple_list = self.data_parser.parse_macd_signal_intersect(result_df)
+            logging.info("Begin extracting the most recent segment of MA intersection")
+            self.data_parser.parse_macd_signal_intersect(result_df)
             most_recent_segment_df = self.extract_most_recent_segment(data_frame = result_df)
         except RuntimeError as e:
-            print("Error parsing MACD into intersecting segments: {}".format(e))
+            logging.error("Error parsing MACD into intersecting segments: {}".format(e))
             raise e
 
         latest_index = most_recent_segment_df
@@ -73,40 +111,17 @@ class MacdScreener:
 
 
         if days == ta.INVALID_PREDICTION or days > self.trigger_in_n_days:
-            print("MACD fast MA breaching slow MA is not likely to happen")
+            logging.info("MACD fast MA breaching slow MA is not likely to happen")
         else:
-            print("MACD fast MA will breach"
+            logging.info("MACD fast MA will breach"
                   " slow MA in {} days".format(days))
 
         if days != ta.INVALID_PREDICTION:
-            return {"pass":True, "prediction":days}
+            return {"__type__":self.__type__ ,"pass":True, "prediction":days}
         else:
-            return {"pass":False, "prediction":ta.INVALID_PREDICTION}
+            return {"__type__":self.__type__ ,"pass":False, "prediction":ta.INVALID_PREDICTION}
 
 class StochasticScreener:
-    #{
-    # json_data["__type__"] = "STOCHASTIC_OSCILLATOR"
-    # json_data["trigger_cause"] = "SLOW_MA"
-    # json_data["trigger_direction"] = "BETWEEN"
-    # json_data["upper_bound"] = 20
-    # json_data["lower_bound"] = 0
-    # json_data["bound"] = 10 optional
-    #}
-
-    def __init__(self, json):
-        self.__type__ = json["__type__"]
-        self.trigger_cause = json["trigger_cause"]
-        self.trigger_direction = json["trigger_direction"]
-        self.upper_bound = json["upper_bound"]
-        self.lower_bound = json["lower_bound"]
-        if "bound" in json:
-            self.bound = json["bound"]
-        if self.__type__ == "STOCHASTIC_OSCILLATOR":
-            self.calculator = ta.StochasticOscillator()
-        elif self.__type__ == "STOCHASTIC_OSCILLATOR_RSI":
-            self.calculator = ta.RSI()
-        self.data_parser = ta.DataParser()
-
 
     def screen(self, data):
         print("Begin {}".format(self.__type__))
@@ -117,8 +132,8 @@ class StochasticScreener:
         currentValue = 'nan' if currentValue != currentValue else currentValue
 
         if self.lower_bound <= k_df.K_MA_3[0] <= self.upper_bound:
-            print("meets required condition")
+            logging.info("StochasticScreener meets required condition")
             return {"pass": True, "current_value": currentValue}
         else:
-            print("fails to meet required condition")
+            logging.info("StochasticScreener fails to meet required condition")
             return {"pass":False, "current_value":currentValue}
