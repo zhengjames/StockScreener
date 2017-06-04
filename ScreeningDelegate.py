@@ -1,6 +1,5 @@
 import logging
 from simpleRequest import QuandlRequest
-import StockData
 from ScreeningDepartment import ScreeningDepartment
 class ScreeningDelegate:
     def __init__(self):
@@ -11,7 +10,7 @@ class ScreeningDelegate:
 
 
     """ given array of screeners and tickers, use all screener on each ticker"""
-    def screen_all(self, screeners_json_list, tickers_arr):
+    def screen_all(self, screeners_json_list, tickers_arr, flags_dict):
         logging.info("Begin to screen all tickers {} through {}".format( tickers_arr, screeners_json_list))
         self.screening_department.init_screener_list(screeners_json_list)
         result = {}
@@ -23,10 +22,10 @@ class ScreeningDelegate:
                     ticker, ticker_dataframe)
                 result[ticker] = screened_result_list
             except Exception as e:
-                logging.error("Failed ticker={}".format(ticker))
+                logging.error("Failed ticker={} error={}".format(ticker, e))
 
+        result = self.format_returned_results(result, flags_dict)
         return result
-
 
     """ Given a ticker, call api to get stock data and return them in a dataframe"""
     def fetchStockData(self, ticker):
@@ -43,6 +42,24 @@ class ScreeningDelegate:
 
     """runs the ticker through all the screener"""
 
-    def format_results(self, ticker, screened_result):
-        return []
+    def format_returned_results(self, screened_result, flags):
+        formatted_result = {}
+        logging.info("Begin formatting results")
+        if flags["request_only_matched_criteria"]:
+            for ticker, screened_result_arr in screened_result.items():
+                if self.pass_screening(screened_result_arr):
+                    logging.info("ticker={} passed flag criteria".format(ticker))
+                    formatted_result[ticker] = screened_result_arr
+            return formatted_result
+        return screened_result
+
+    #given [{one_screener_result},{one_screener_result},{...}] return if pass all
+    def pass_screening(self, screening_result_arr):
+        for dict in screening_result_arr:
+            if not dict["pass"]:
+                return False
+        return True
+
+
+
 

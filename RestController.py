@@ -1,14 +1,12 @@
 import bottle
 from bottle import request, response, post, get, run, hook, app, Bottle
-from TechnicalScreener import *
 from simpleRequest import QuandlRequest
 from ScreeningDelegate import ScreeningDelegate
+import logging
 import json
-import traceback
 
 
 request_handler = QuandlRequest()
-screener_factory = ScreenerFactory()
 screening_delegate = ScreeningDelegate()
 
 
@@ -30,7 +28,8 @@ def screen_stock():
     is_match_criterias = True
     screener_json_arr = request.json.get("screener_arr")
     ticker_arr = request.json.get("tickers_arr")
-    result = screening_delegate.screen_all(screener_json_arr, ticker_arr)
+    flags_dict = request.json.get("flags")
+    result = screening_delegate.screen_all(screener_json_arr, ticker_arr, flags_dict)
 
     response.content_type = 'application/json'
 

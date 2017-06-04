@@ -5,7 +5,7 @@ import scipy.optimize as scopt
 import matplotlib.pyplot as plt
 from Utilities import AllConstants as CONSTANT
 from Utilities import DataPrepUtil
-
+import logging
 INVALID_PREDICTION = 9999
 
 class Calculator:
@@ -149,53 +149,76 @@ class DataParser:
 class StochasticOscillator(Calculator):
     #returns {[K][K_MA_3]}
     def calculate(self, data_frame, look_back_period = 14, sma_period = 3):
+        '''
+        :param data_frame: with column High and column Low
+        :param look_back_period:
+        :param sma_period:
+        :return: two arrays
+
+        Note: Stochastic Oscillator has two parts
+        1. Stochastic calculation:
+        2. Oscillation calculation: producing the set of oscillating arrays
+        '''
+
+        k_array = self.calc_stochastic_array(data_frame, look_back_period=look_back_period)
+        # format the oscillating arrays
+        k_array_sma = self.calc_simple_moving_average(k_array, 3)
+        return pd.concat([pd.DataFrame({"K":k_array}), pd.DataFrame({"K_MA_3":k_array_sma})], axis=1)
+
+    #applys the universal algorithm for basic stochastic
+    def calc_stochastic_array(self, data_frame, look_back_period=14):
+        '''
+
+        :param data_frame: High, Low, Close
+        :param look_back_period:
+        :return: stochastic array
+        '''
+        #Algorithm: %K = (Current Close - Lowest Low)/(Highest High - Lowest Low) * 100
         k_array = np.empty(len(data_frame.index)) * np.nan
 
         index = len(data_frame) - look_back_period
-        #calculate the stochastic point
-        #iterate through data from last element(oldest) to most recent
+        # calculate the stochastic point
+        # iterate through data from last element(oldest) to most recent
         while (index >= 0):
-            #14 elements
-            high_list = data_frame.High[index : index + look_back_period].tolist()
-            low_list = data_frame.Low[index : index + look_back_period].tolist()
+            # 14 elements
+            high_list = data_frame.High[index: index + look_back_period].tolist()
+            low_list = data_frame.Low[index: index + look_back_period].tolist()
             current_close = data_frame.Close[index]
             high_list = np.sort(high_list)
             low_list = np.sort(low_list)
             highest_high = high_list[len(high_list) - 1]
+
+            # np.nanmax finds max and ignore Nan from list
+            highest_high = np.nanmax(high_list)
+            lowest_low = np.nanmin(low_list)
             lowest_low = low_list[0]
-            k = ((current_close - lowest_low)/(highest_high - lowest_low)) * 100
+            k = ((current_close - lowest_low) / (highest_high - lowest_low)) * 100
             k_array[index] = k
             index -= 1
+        return k_array
 
-        k_array_sma = self.calc_simple_moving_average(k_array, 3)
-        return pd.concat([pd.DataFrame({"K":k_array}), pd.DataFrame({"K_MA_3":k_array_sma})], axis=1)
+
 
 #http://cns.bu.edu/~gsc/CN710/fincast/Technical%20_indicators/Relative%20Strength%20Index%20(RSI).htm
-class RSI(Calculator):
+class Stochastic_RSI(StochasticOscillator):
     def calculate(self, data_frame, look_back_period = 14, sma_period=3):
+        #calculate rsi
         rsi_df = self.calculate_rsi(data_frame)
-        stoch_rsi_list = np.empty(len(rsi_df)) * np.nan
-        index = len(rsi_df) - look_back_period - look_back_period
-        while (index >= 0):
-            # 14 elements
-            sorted_rsi_list = np.sort(rsi_df.rsi[index: index + look_back_period].tolist())
-            highest_high_rsi = sorted_rsi_list[len(sorted_rsi_list) - 1]
-            lowest_low_rsi = sorted_rsi_list[0]
-            current_rsi = rsi_df.rsi[index]
+        #trim any nan from the tail
 
-            stoch_rsi_list[index] = ((current_rsi - lowest_low_rsi) / (highest_high_rsi - lowest_low_rsi)) * 100
-            index -= 1
+        # prepare data for standard stochastic calculation
+        # High, Low, Close is exactly the same
+        formatted_rsi_df = pd.DataFrame({'High': rsi_df['rsi'], 'Low': rsi_df['rsi'], 'Close': rsi_df['rsi']})
+        stoch_rsi_arr = self.calc_stochastic_array(formatted_rsi_df, look_back_period=look_back_period)
 
-        rsi_sma = self.calc_simple_moving_average(stoch_rsi_list, 3)
+        #format the rsi oscillation
+        rsi_sma = self.calc_simple_moving_average(stoch_rsi_arr, 3)
         rsi_sma_sma = self.calc_simple_moving_average(rsi_sma, 3)
 
         return pd.concat([pd.DataFrame({"K": rsi_sma}), pd.DataFrame({"K_MA_3": rsi_sma_sma})], axis=1)
 
     def calculate_rsi(self, data_frame, look_back_period = 14):
         closed_price = data_frame.Close
-        #queue max size 14
-        gain_loss_queue = queue.Queue(look_back_period)
-
         gain_loss_array = np.empty(len(data_frame)) * np.nan
 
         #cannot calculate gain or loss from the ipo date, first date therefore start with len()-1
@@ -224,10 +247,12 @@ class RSI(Calculator):
                 total_loss -= value
 
 
-        avg_gain_list = np.empty(len(data_frame)) * np.nan
-        avg_loss_list = np.empty(len(data_frame)) * np.nan
-        RS_list = np.empty(len(data_frame)) * np.nan
-        RSI_list = np.empty(len(data_frame)) * np.nan
+
+        output_len = len(data_frame) - look_back_period
+        avg_gain_list = np.empty(output_len) * np.nan
+        avg_loss_list = np.empty(output_len) * np.nan
+        RS_list = np.empty(output_len) * np.nan
+        RSI_list = np.empty(output_len) * np.nan
         #fill first set of values
         avg_gain_loss_index = len(data_frame) - look_back_period - 1
         avg_gain_list[avg_gain_loss_index] = total_gain / look_back_period
@@ -260,7 +285,7 @@ class RSI(Calculator):
 
 
         return pd.concat([
-            pd.DataFrame({'date' : data_frame['Date']}),
+            pd.DataFrame({'date' : data_frame['Date'][:output_len]}),
             pd.DataFrame({'avg_gain' : avg_gain_list}),
             pd.DataFrame({'avg_loss' : avg_loss_list}),
             pd.DataFrame({'rs': RS_list}),
@@ -274,7 +299,7 @@ class ForcastAlgorithms:
         data_frame.y contains the index 0,1,2,3..
     """
     def predict_cross_zero_macd(self, data_frame, min_num_previous_data = 2, trigger_direction=CONSTANT.ABOVE, algorithm ='LINEAR'):
-        print("Begin predict cross {} zero", trigger_direction)
+        logging.info("Begin predict cross {} zero".format(trigger_direction))
 
         pattern_to_prepare = CONSTANT.ASCENDING if trigger_direction == CONSTANT.ABOVE else CONSTANT.DESCENDING
 
@@ -292,50 +317,6 @@ class ForcastAlgorithms:
         #number days until break above zero
         return abs(calculator(0) - y[0])
 
-
-    def predict_cross_below_zero_macd(self, data_frame, num_previous_data = 2):
-        print("Begin predict cross below zero")
-        #we are checking for breaking below zero so most recent data should be positive
-        #if negative it already break below zero
-        if data_frame.x[0] < 0:
-            return INVALID_PREDICTION
-        elif data_frame.x[0] == 0:
-            return 0
-
-        #predict using the last 2 points by default
-
-        if num_previous_data < 2:
-            num_previous_data = 2
-
-        x = data_frame.x[:num_previous_data]
-        y = data_frame.y[:num_previous_data]
-
-        # find longest descending value that is equal or fewer than num_previous_data
-        # this ensures a proper fit for 1 degree linear fit
-        for i in range(1, num_previous_data):
-            #breaks descending order
-            recent_point = data_frame.x[i - 1]
-            old_point = data_frame.x[i]
-
-            #both should be negative
-            if recent_point <= 0 or old_point <= 0:
-                return INVALID_PREDICTION
-            #more recent points should be reaching toward 0
-            if not self.a_closer_to_zero_than_b(recent_point, old_point):
-                if i == 1:
-                    return INVALID_PREDICTION
-                #this is the cutoff segment used for fitting
-                x = data_frame.x[:i]
-                y = data_frame.y[:i]
-
-
-        # now x and y should have at least len of 2, min num data required to predict
-        poly_coefficients = np.polyfit(x, y, 1)
-        #store formula in calculator so we can just call it to predict
-        calculator = np.poly1d(poly_coefficients)
-
-        #number days until break above zero
-        return abs(calculator(0) - y[0])
     #returns 0 if just crossed
     def predict_just_crossed_zero_macd(self, data_frame, direction="BOTH"):
         print("Begin predict just cross zero")
