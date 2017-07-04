@@ -1,0 +1,22 @@
+MACD SCREENER
+{
+    "__type__": "MACD_SCREENER",
+    "trigger_cause": "FAST_SLOW_MA_CROSS",
+    "trigger_direction": "ABOVE", "BELOW"
+    "trigger_in_n_days":
+}
+
+STOCHASTIC RSI
+ {
+    "__type__": "STOCHASTIC_OSCILLATOR",
+    "__subtype__": "RSI" or empty
+    "trigger_cause": "SLOW_MA" or "FAST_MA" or "FAST_AND_SLOW_MA"
+    "upper_bound": 25,
+    "lower_bound": 0,
+    "trigger_direction": "ABOVE" or "BELOW" or "BETWEEN"
+    #show below if predictive screening is on
+    "trigger_in_n_days":
+}
+
+
+

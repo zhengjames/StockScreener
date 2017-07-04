@@ -45,7 +45,8 @@ class ScreeningDelegate:
     def format_returned_results(self, screened_result, flags):
         formatted_result = {}
         logging.info("Begin formatting results")
-        if flags["request_only_matched_criteria"]:
+        #if flag is not None
+        if flags and flags.get("request_only_matched_criteria"):
             for ticker, screened_result_arr in screened_result.items():
                 if self.pass_screening(screened_result_arr):
                     logging.info("ticker={} passed flag criteria".format(ticker))

@@ -13,7 +13,7 @@ class ScreeningDepartment:
     def init_screener_list(self, screeners_json_list):
         logging.info("ScreeningDepartment attempt to construct all screeners")
         self.screener_list = []
-        for screener_json in screeners_json_list:
+        for screener_json in filter(None, screeners_json_list):
             try:
                 self.screener_list.append(self.screener_factory.create_screener(screener_json))
             except Exception as e:
@@ -80,8 +80,9 @@ class ScreenerFactory:
             "upper_bound": 25,
             "lower_bound": 0,
             "trigger_cause": "FAST_SLOW_MA_CROSS", `
-            "trigger_direction": "ABOVE", "BELOW" `
-            "trigger_in_n_days": `
+            "trigger_direction": "ABOVE", "BELOW", "BETWEEN' `
+            "trigger_in_n_days":
+            "trigger_target: 10
         },
         :return:
         '''
@@ -95,6 +96,10 @@ class ScreenerFactory:
             stochastic.trigger_direction = json.get("trigger_direction")
             stochastic.upper_bound = json.get("upper_bound")
             stochastic.lower_bound = json.get("lower_bound")
+        elif json.get("trigger_direction") == CONSTANT.ABOVE or json.get("trigger_direction") == CONSTANT.BELOW:
+            #just set both lower and upper bound to be same value
+            stochastic.trigger_direction = json.get("trigger_direction")
+            stochastic.trigger_target = json.get('trigger_target')
         #prediction oscillator
         else:
             stochastic.trigger_direction = json.get("trigger_direction")
@@ -176,26 +181,37 @@ class StochasticScreener:
 
         #list of tuples (which moving average, value)
         current_stoch_value_list = []
+        values_to_screen_list = []
         if CONSTANT.TRIGGER_CAUSE_FAST_MA == self.trigger_cause:
             current_stoch_value_list.append({CONSTANT.TRIGGER_CAUSE_FAST_MA: k_df["K"][0]})
+            values_to_screen_list.append(k_df["K"][0])
         elif CONSTANT.TRIGGER_CAUSE_SLOW_MA == self.trigger_cause:
             current_stoch_value_list.append({CONSTANT.TRIGGER_CAUSE_SLOW_MA: k_df["K_MA_3"][0]})
-        elif CONSTANT.TRIGGER_CAUSE_FAST_AND_SLOW_MA == self.trigger_cause:
+            values_to_screen_list.append(k_df["K_MA_3"][0])
+        elif CONSTANT.TRIGGER_CAUSE_SLOW_AND_FAST_MA == self.trigger_cause:
             current_stoch_value_list.append({CONSTANT.TRIGGER_CAUSE_FAST_MA: k_df["K"][0]})
             current_stoch_value_list.append({CONSTANT.TRIGGER_CAUSE_SLOW_MA: k_df["K_MA_3"][0]})
+            values_to_screen_list.append(k_df["K"][0])
+            values_to_screen_list.append(k_df["K_MA_3"][0])
         else:
             raise RuntimeError("Unrecognized trigger_cause={}".format(self.trigger_cause))
         response = {"__type__": self.__type__, "__subtype__": self.__subtype__}
-        #return the values
-        for dict in current_stoch_value_list:
-            for ma_type, stoch_value in dict.items():
-                #if nan return false
-                if stoch_value != stoch_value or\
-                not self.lower_bound <= stoch_value <= self.upper_bound:
-                    response.update({"pass": False, "current_value": current_stoch_value_list})
-                    return response
-        #still within range
-        response.update({"pass": True, "calculations": current_stoch_value_list})
+
+        passed = True
+        for value in values_to_screen_list:
+            #fail because not above required threshold
+            if CONSTANT.ABOVE == self.trigger_direction:
+                if value <= self.trigger_target:
+                    passed = False
+            elif CONSTANT.BELOW == self.trigger_direction:
+                if value >= self.trigger_target:
+                    passed = False
+            #between two bounds
+            else:
+                if value < self.lower_bound or value > self.upper_bound:
+                    passed = False
+
+        response.update({"pass": passed, "current_value": current_stoch_value_list})
         return response
 
 
