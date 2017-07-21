@@ -18,9 +18,10 @@ class ScreeningDelegate:
             logging.info("========={}=========".format(ticker))
             try:
                 ticker_dataframe = self.fetchStockData(ticker)
-                tick, screened_result_list = self.screening_department.run_all_screener_on_ticker(
-                    ticker, ticker_dataframe)
-                result[ticker] = screened_result_list
+                if not ticker_dataframe.empty:
+                    tick, screened_result_list = self.screening_department.run_all_screener_on_ticker(
+                        ticker, ticker_dataframe)
+                    result[ticker] = screened_result_list
             except Exception as e:
                 logging.error("Failed ticker={} error={}".format(ticker, e))
 

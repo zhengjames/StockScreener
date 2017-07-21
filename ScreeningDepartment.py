@@ -1,6 +1,7 @@
 import TechnicalAlgorithms as ta
 import numpy as np
 import pandas as pd
+import math
 from Utilities import AllConstants as CONSTANT
 import logging
 """class that holds all of the screeners"""
@@ -25,17 +26,17 @@ class ScreeningDepartment:
         if len(self.screener_list) == 0:
             logging.WARNING("List screener is empty for ticker={}", ticker)
             return
-        result_arr = []
+        result_map = {}
         for screener in self.screener_list:
             logging.info("Running screener __type__={} ticker={}".format(screener.__type__, ticker ))
             try:
-                result_arr.append(screener.screen(dataframe))
+                result_map[screener.__type__] = screener.screen(dataframe)
             except Exception as e:
                 logging.error("Failed screening for screener={} ticker={} error={}"
                               .format(screener.__type__, ticker, e))
 
         logging.info("Screened entire list screener={}".format(self.screener_list))
-        return (ticker, result_arr)
+        return (ticker, result_map)
 
     def clean_up(self):
         self.screener_list = []
@@ -169,6 +170,9 @@ class MacdScreener:
         else:
             return {"__type__":self.__type__ ,"pass":False, "prediction":ta.INVALID_PREDICTION}
 
+    def get_name(self):
+        return 'MACD';
+
 class StochasticScreener:
 
     def screen(self, data):
@@ -180,17 +184,17 @@ class StochasticScreener:
         currentValue = 'nan' if currentValue != currentValue else currentValue
 
         #list of tuples (which moving average, value)
-        current_stoch_value_list = []
+        current_stoch_value_list = {}
         values_to_screen_list = []
         if CONSTANT.TRIGGER_CAUSE_FAST_MA == self.trigger_cause:
-            current_stoch_value_list.append({CONSTANT.TRIGGER_CAUSE_FAST_MA: k_df["K"][0]})
+            current_stoch_value_list[CONSTANT.TRIGGER_CAUSE_FAST_MA] = k_df["K"][0]
             values_to_screen_list.append(k_df["K"][0])
         elif CONSTANT.TRIGGER_CAUSE_SLOW_MA == self.trigger_cause:
-            current_stoch_value_list.append({CONSTANT.TRIGGER_CAUSE_SLOW_MA: k_df["K_MA_3"][0]})
+            current_stoch_value_list[CONSTANT.TRIGGER_CAUSE_SLOW_MA] = k_df["K_MA_3"][0]
             values_to_screen_list.append(k_df["K_MA_3"][0])
         elif CONSTANT.TRIGGER_CAUSE_SLOW_AND_FAST_MA == self.trigger_cause:
-            current_stoch_value_list.append({CONSTANT.TRIGGER_CAUSE_FAST_MA: k_df["K"][0]})
-            current_stoch_value_list.append({CONSTANT.TRIGGER_CAUSE_SLOW_MA: k_df["K_MA_3"][0]})
+            current_stoch_value_list[CONSTANT.TRIGGER_CAUSE_FAST_MA] = k_df["K"][0]
+            current_stoch_value_list[CONSTANT.TRIGGER_CAUSE_SLOW_MA] = k_df["K_MA_3"][0]
             values_to_screen_list.append(k_df["K"][0])
             values_to_screen_list.append(k_df["K_MA_3"][0])
         else:
@@ -199,8 +203,12 @@ class StochasticScreener:
 
         passed = True
         for value in values_to_screen_list:
+            #adding string prevents it from breaking JSON syntax of sending 'var': NAN
+            if math.isnan(value):
+                value = 'nan'
+                passed = False
             #fail because not above required threshold
-            if CONSTANT.ABOVE == self.trigger_direction:
+            elif CONSTANT.ABOVE == self.trigger_direction:
                 if value <= self.trigger_target:
                     passed = False
             elif CONSTANT.BELOW == self.trigger_direction:
@@ -211,11 +219,14 @@ class StochasticScreener:
                 if value < self.lower_bound or value > self.upper_bound:
                     passed = False
 
-        response.update({"pass": passed, "current_value": current_stoch_value_list})
+        response.update({"pass": passed, "calculated_map": current_stoch_value_list})
         return response
 
 
-
+    def get_name(self):
+        if self.__subtype__ == 'RSI':
+            return 'STOCHASTIC_RSI'
+        return 'STOCHASTIC'
 
 
 

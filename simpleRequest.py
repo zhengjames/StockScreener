@@ -5,10 +5,13 @@ import pandas as pd
 from io import StringIO
 
 class QuandlRequest:
+    def __init__(self):
+        self.nMostRecentDays = 60
+
 
     def get_response(self, ticker):
         logging.info("Sending request for stock info on {}".format(ticker))
-        response = requests.get(self.get_url_template().substitute(TICKER = ticker))
+        response = requests.get(self.get_url_template().substitute(TICKER = ticker), 3)
 
         if 200 != response.status_code:
             raise Exception('Failed response from data center response status code {}'
@@ -16,13 +19,17 @@ class QuandlRequest:
         return response
 
     def get_url_template(self):
-        return Template("""https://www.quandl.com/api/v3/datasets/WIKI/$TICKER.csv?
-        api_key=Pz4pH-vyzazGW9961wYm&&start_date=2016-01-01""")
+        return Template('https://www.quandl.com/api/v3/datasets/WIKI/$TICKER.csv?'
+                        'api_key=Pz4pH-vyzazGW9961wYm&&limit={}'.format(self.nMostRecentDays))
 
     def get_response_dataframe(self, ticker):
-        response = self.get_response(ticker)
-        #turns to dataframe
-        return pd.read_csv(StringIO(response.content.decode('utf-8')))
+        try:
+            response = self.get_response(ticker.strip())
+            finalData = pd.read_csv(StringIO(response.content.decode('utf-8')))
+        except Exception as e:
+            raise e
+
+        return finalData
 
     def convert_csv_to_dataframe(self, csv):
         self.data = [row for row in csv.reader(csv.splitlines())]

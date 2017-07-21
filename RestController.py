@@ -25,14 +25,15 @@ def screen_stock():
     logging.info("received request on endpoint /screen")
     '''Handles name creation'''
 
-    is_match_criterias = True
-    screener_json_arr = request.json.get("screener_arr")
-    ticker_arr = request.json.get("tickers_arr")
-    flags_dict = request.json.get("flags")
+    request_json = request.json
+    screener_json_arr = request_json.get("screener_arr")
+    ticker_arr = request_json.get("tickers_arr")
+    flags_dict = {'request_only_matched_criteria': False}
+    #request_json.get("flags")
     result = screening_delegate.screen_all(screener_json_arr, ticker_arr, flags_dict)
 
     response.content_type = 'application/json'
-
+    logging.info("controller returning results: {}".format( json.dumps(result)))
     return json.dumps(result)
 
 @bottle.route('/screen', method='OPTIONS')
@@ -57,7 +58,8 @@ def enable_cors_after_request_hook():
     add_cors_headers()
 
 def add_cors_headers():
-    bottle.response.headers['Access-Control-Allow-Origin'] = '*'
+    bottle.response.headers['Access-Control-Allow-Credentials'] = 'true'
+    bottle.response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
     bottle.response.headers['Access-Control-Allow-Methods'] = \
         'GET, POST, PUT, OPTIONS'
     bottle.response.headers['Access-Control-Allow-Headers'] = \
