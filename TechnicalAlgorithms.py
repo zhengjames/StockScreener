@@ -49,7 +49,7 @@ class Macd(Calculator):
         self.macdEma = 9
 
     def calculate(self, data_frame, longer_window = 26, shorter_window = 12, macd_window = 9):
-        values = data_frame['Close']
+        values = data_frame['close']
         long_ema = self.calc_exponential_moving_average(values, longer_window)
         short_ema = self.calc_exponential_moving_average(values, shorter_window)
 
@@ -74,7 +74,7 @@ class Macd(Calculator):
         center_line = macd_ema - signal_sma
 
         return pd.concat([
-            pd.DataFrame({'date': data_frame['Date']}),
+            pd.DataFrame({'date': data_frame['date']}),
             pd.DataFrame({'macd_ema': macd_ema}),
             pd.DataFrame({'signal_sma':signal_sma}),
             pd.DataFrame({'center_line':center_line}),
@@ -181,9 +181,9 @@ class StochasticOscillator(Calculator):
         # iterate through data from last element(oldest) to most recent
         while (index >= 0):
             # 14 elements
-            high_list = data_frame.High[index: index + look_back_period].tolist()
-            low_list = data_frame.Low[index: index + look_back_period].tolist()
-            current_close = data_frame.Close[index]
+            high_list = data_frame.high[index: index + look_back_period].tolist()
+            low_list = data_frame.low[index: index + look_back_period].tolist()
+            current_close = data_frame.close[index]
             high_list = np.sort(high_list)
             low_list = np.sort(low_list)
             highest_high = high_list[len(high_list) - 1]
@@ -208,7 +208,7 @@ class Stochastic_RSI(StochasticOscillator):
 
         # prepare data for standard stochastic calculation
         # High, Low, Close is exactly the same
-        formatted_rsi_df = pd.DataFrame({'High': rsi_df['rsi'], 'Low': rsi_df['rsi'], 'Close': rsi_df['rsi']})
+        formatted_rsi_df = pd.DataFrame({'high': rsi_df['rsi'], 'low': rsi_df['rsi'], 'close': rsi_df['rsi']})
         stoch_rsi_arr = self.calc_stochastic_array(formatted_rsi_df, look_back_period=look_back_period)
 
         #format the rsi oscillation
@@ -218,7 +218,7 @@ class Stochastic_RSI(StochasticOscillator):
         return pd.concat([pd.DataFrame({"K": rsi_sma}), pd.DataFrame({"K_MA_3": rsi_sma_sma})], axis=1)
 
     def calculate_rsi(self, data_frame, look_back_period = 14):
-        closed_price = data_frame.Close
+        closed_price = data_frame.close
         gain_loss_array = np.empty(len(data_frame)) * np.nan
 
         #cannot calculate gain or loss from the ipo date, first date therefore start with len()-1
@@ -285,7 +285,7 @@ class Stochastic_RSI(StochasticOscillator):
 
 
         return pd.concat([
-            pd.DataFrame({'date' : data_frame['Date'][:output_len]}),
+            pd.DataFrame({'date' : data_frame['date'][:output_len]}),
             pd.DataFrame({'avg_gain' : avg_gain_list}),
             pd.DataFrame({'avg_loss' : avg_loss_list}),
             pd.DataFrame({'rs': RS_list}),

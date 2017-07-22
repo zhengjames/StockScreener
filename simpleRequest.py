@@ -2,6 +2,7 @@ import requests
 from string import Template
 import logging
 import pandas as pd
+import Utilities.DataPrepUtil as data_util
 from io import StringIO
 
 class QuandlRequest:
@@ -35,7 +36,8 @@ class QuandlRequest:
             finalData = pd.read_csv(StringIO(response.content.decode('utf-8')))
         except Exception as e:
             raise e
-
+        data_util.normalize_col_names(finalData)
+        finalData = data_util.make_asc_date_order_quandl(finalData)
         return finalData
 
     def convert_csv_to_dataframe(self, csv):
@@ -43,8 +45,8 @@ class QuandlRequest:
         headers = self.data[0]
         del self.data[0]
         self.data_frame = pd.DataFrame(self.data, columns=headers)
-        self.data_frame[['Open', 'High', 'Low', 'Close', 'Volume', 'Adj. Close']] = \
-            self.data_frame[['Open', 'High', 'Low', 'Close', 'Volume', 'Adj. Close']].apply(pd.to_numeric)
+        self.data_frame[['open', 'high', 'low', 'close', 'volume', 'adj. close']] = \
+            self.data_frame[['open', 'high', 'low', 'close', 'volume', 'adj. close']].apply(pd.to_numeric)
 
 
 

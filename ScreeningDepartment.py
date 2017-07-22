@@ -2,6 +2,7 @@ import TechnicalAlgorithms as ta
 import numpy as np
 import pandas as pd
 import math
+import sys, traceback
 from Utilities import AllConstants as CONSTANT
 import logging
 """class that holds all of the screeners"""

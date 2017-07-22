@@ -36,3 +36,39 @@ def extract_most_recent_asc_desc_xy(data_frame, min_num_previous_data=2, pattern
             return x, y
 
     return INVALID_EXTRACTION
+
+
+'''lower case because it matches python naming standards...'''
+def normalize_col_names(df):
+    df.rename(columns = lambda col_name: col_name.lower(), inplace=True)
+'''quandl returns date in asc format like
+    2017-07-01
+    2017-07-02
+    2017-07-03
+    but this function makes it in desc order
+    2017-07-03
+    2017-07-02
+    2017-07-01'''
+def make_asc_date_order_quandl(df):
+    return df.iloc[::-1]
+
+def segmentate_df_by_ticker(df):
+    ''' {FB: 1; FB:2; TSLA:1; TSLA:2}
+        to
+        {
+            FB: {1,2}
+            TSLA: {1,2}
+        }
+    '''
+    tickers_to_df_dict = {}
+    #strategy iterate through each row
+    if df is None or len(df.index) < 2:
+        return df
+
+
+    groupby_ticker = df.groupby('ticker')
+    for a_group in groupby_ticker:
+        #0th index is the group by 'ticker' and 1st index is the dataframe
+        tickers_to_df_dict[a_group[0]] = a_group[1]
+
+    return tickers_to_df_dict

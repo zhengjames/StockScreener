@@ -1,6 +1,8 @@
 import logging
+import traceback, sys
 from simpleRequest import QuandlRequest
 from ScreeningDepartment import ScreeningDepartment
+import Utilities.DataPrepUtil as data_util
 class ScreeningDelegate:
     def __init__(self):
         self.request_handler = QuandlRequest()
@@ -13,17 +15,23 @@ class ScreeningDelegate:
     def screen_all(self, screeners_json_list, tickers_arr, flags_dict):
         logging.info("Begin to screen all tickers {} through {}".format( tickers_arr, screeners_json_list))
         self.screening_department.init_screener_list(screeners_json_list)
+        #request stock data for all tickers
+        all_tickers_dataframe = self.fetchStockData(tickers_arr)
+        #segmentate into dataframes by per stock
+        all_tickers_dataframe_dict = data_util.segmentate_df_by_ticker(all_tickers_dataframe)
+
         result = {}
-        for ticker in tickers_arr:
+        for ticker in all_tickers_dataframe_dict.keys():
             logging.info("========={}=========".format(ticker))
             try:
-                ticker_dataframe = self.fetchStockData(tickers_arr)
+                ticker_dataframe = all_tickers_dataframe_dict[ticker]
                 if not ticker_dataframe.empty:
                     tick, screened_result_list = self.screening_department.run_all_screener_on_ticker(
                         ticker, ticker_dataframe)
                     result[ticker] = screened_result_list
             except Exception as e:
                 logging.error("Failed ticker={} error={}".format(ticker, e))
+                traceback.print_exc(file=sys.stdout)
 
         result = self.format_returned_results(result, flags_dict)
         return result
@@ -36,6 +44,7 @@ class ScreeningDelegate:
         except Exception as e:
             print(e)
             logging.error(e)
+            traceback.print_exc(file=sys.stdout)
             raise e
         logging.info("Received response for {}".format(ticker))
         """response.text.splitlines() is a list of strings"""

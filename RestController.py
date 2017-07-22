@@ -33,7 +33,7 @@ def screen_stock():
     result = screening_delegate.screen_all(screener_json_arr, ticker_arr, flags_dict)
 
     response.content_type = 'application/json'
-    logging.info("controller returning results: {}".format( json.dumps(result)))
+    logging.info("controller returning results: {}".format(json.dumps(result)))
     return json.dumps(result)
 
 @bottle.route('/screen', method='OPTIONS')
