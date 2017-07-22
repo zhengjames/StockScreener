@@ -17,7 +17,7 @@ class ScreeningDelegate:
         for ticker in tickers_arr:
             logging.info("========={}=========".format(ticker))
             try:
-                ticker_dataframe = self.fetchStockData(ticker)
+                ticker_dataframe = self.fetchStockData(tickers_arr)
                 if not ticker_dataframe.empty:
                     tick, screened_result_list = self.screening_department.run_all_screener_on_ticker(
                         ticker, ticker_dataframe)

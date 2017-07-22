@@ -7,11 +7,15 @@ from io import StringIO
 class QuandlRequest:
     def __init__(self):
         self.nMostRecentDays = 60
+        self.date = 20170101
 
 
-    def get_response(self, ticker):
-        logging.info("Sending request for stock info on {}".format(ticker))
-        response = requests.get(self.get_url_template().substitute(TICKER = ticker), 3)
+    def get_response(self, tickers_arr):
+        logging.info("Sending request for stock info on {}".format(tickers_arr))
+        #three seconds timeout
+        # response = requests.get(self.get_url_template().substitute(TICKER = ticker), 3)
+        tickers_string_csv = ','.join(tickers_arr)
+        response = requests.get(self.get_url_multi_tickers_template().substitute(TICKER = tickers_string_csv))
 
         if 200 != response.status_code:
             raise Exception('Failed response from data center response status code {}'
@@ -21,10 +25,13 @@ class QuandlRequest:
     def get_url_template(self):
         return Template('https://www.quandl.com/api/v3/datasets/WIKI/$TICKER.csv?'
                         'api_key=Pz4pH-vyzazGW9961wYm&&limit={}'.format(self.nMostRecentDays))
+    def get_url_multi_tickers_template(self):
+        return Template('https://www.quandl.com/api/v3/datatables/WIKI/PRICES.csv?date.gte={}'
+                        '&ticker=$TICKER&api_key=Pz4pH-vyzazGW9961wYm'.format(self.date))
 
     def get_response_dataframe(self, ticker):
         try:
-            response = self.get_response(ticker.strip())
+            response = self.get_response(ticker)
             finalData = pd.read_csv(StringIO(response.content.decode('utf-8')))
         except Exception as e:
             raise e
