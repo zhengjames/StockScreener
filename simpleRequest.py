@@ -8,7 +8,7 @@ from io import StringIO
 class QuandlRequest:
     def __init__(self):
         self.nMostRecentDays = 60
-        self.date = 20170101
+        self.date = 20120607
 
 
     def get_response(self, tickers_arr):
@@ -27,8 +27,11 @@ class QuandlRequest:
         return Template('https://www.quandl.com/api/v3/datasets/WIKI/$TICKER.csv?'
                         'api_key=Pz4pH-vyzazGW9961wYm&&limit={}'.format(self.nMostRecentDays))
     def get_url_multi_tickers_template(self):
-        return Template('https://www.quandl.com/api/v3/datatables/WIKI/PRICES.csv?date.gte={}'
-                        '&ticker=$TICKER&api_key=Pz4pH-vyzazGW9961wYm'.format(self.date))
+        # return Template('https://www.quandl.com/api/v3/datatables/WIKI/PRICES.csv?date.gte={}'
+        #                 '&ticker=$TICKER&api_key=Pz4pH-vyzazGW9961wYm'.format(self.date))
+
+        return Template('https://www.quandl.com/api/v3/datatables/WIKI/PRICES.csv?date.lte={}&'
+                    'ticker=$TICKER&api_key=Pz4pH-vyzazGW9961wYm'.format(self.date))
 
     def get_response_dataframe(self, ticker):
         try:

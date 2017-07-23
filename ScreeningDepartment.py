@@ -35,6 +35,8 @@ class ScreeningDepartment:
             except Exception as e:
                 logging.error("Failed screening for screener={} ticker={} error={}"
                               .format(screener.__type__, ticker, e))
+                traceback.print_exc(file=sys.stdout)
+                raise e
 
         logging.info("Screened entire list screener={}".format(self.screener_list))
         return (ticker, result_map)
@@ -120,13 +122,34 @@ class ScreenerFactory:
 
 class MacdScreener:
 
-    def extract_most_recent_segment(self, data_frame):
+    def extract_most_recent_asc_or_desc_segment(self, column):
         i = 0
-        while i < len(data_frame):
-            if data_frame.cross_over_indicator[i] == 'start':
-                return data_frame[0:i+1]
-            i += 1
-        return []
+        #filter out bad inputs
+        if len(column) < 2 or math.isnan(column[0])\
+                or math.isnan(column[1]):
+            return []
+
+        #this will just return [0,0,0,0...]
+        elif column[0] == 0:
+            count = 1
+            while i < len(column) and not math.isnan(column[i]) \
+                    and column[i] == 0:
+                count += 1
+            return column[0: i]
+
+
+        #this will return ascending order
+        elif column[0] < column[1]:
+            i = 2
+            while (i < len(column)) and not math.isnan(column[i]) and (column[i - 1] < column[i]):
+                i += 1
+            return column[0: i]
+        #this will return descending order
+        else:
+            i = 2
+            while (i < len(column)) and not math.isnan(column[i]) and (column[i - 1] > column[i]):
+                i += 1
+            return column[0: i]
 
     def screen(self, data):
         try:
@@ -140,12 +163,12 @@ class MacdScreener:
         try:
             logging.info("Begin extracting the most recent segment of MA intersection")
             self.data_parser.parse_macd_signal_intersect(result_df)
-            most_recent_segment_df = self.extract_most_recent_segment(data_frame = result_df)
+            most_recent_segment_arr = self.extract_most_recent_asc_or_desc_segment(result_df['center_line'])
         except RuntimeError as e:
             logging.error("Error parsing MACD into intersecting segments: {}".format(e))
             raise e
 
-        latest_index = most_recent_segment_df
+        latest_index = result_df[0: len(most_recent_segment_arr)]
         #create artificial dates 1,2,3,4,5...
         y_array = np.linspace(start=len(latest_index), stop=1, num=len(latest_index), dtype=int)
         data_frame = pd.concat([pd.DataFrame({'x': latest_index.center_line}), pd.DataFrame({'y': y_array})], axis=1)
