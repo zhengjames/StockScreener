@@ -5,43 +5,22 @@ import pandas as pd
 import Utilities.DataPrepUtil as data_util
 from io import StringIO
 
-class QuandlRequest:
-    def __init__(self):
-        self.nMostRecentDays = 60
-        self.date = 20120607
+class DataRequest:
+    def fetch_historical_time_series(self, tickers):
+        if type(tickers) is list:
+            request_url = self.multi_tickers_request_url_template.substitute(TICKER=','.join(tickers))
 
+        else:
+            request_url = self.one_ticker_request_url_template.substitute(TICKER=tickers)
 
-    def get_response(self, tickers_arr):
-        logging.info("Sending request for stock info on {}".format(tickers_arr))
-        #three seconds timeout
-        # response = requests.get(self.get_url_template().substitute(TICKER = ticker), 3)
-        tickers_string_csv = ','.join(tickers_arr)
-        response = requests.get(self.get_url_multi_tickers_template().substitute(TICKER = tickers_string_csv))
+        response = requests.get(request_url, 3)
 
         if 200 != response.status_code:
             raise Exception('Failed response from data center response status code {}'
                             .format(response.status_code))
-        return response
-
-    def get_url_template(self):
-        return Template('https://www.quandl.com/api/v3/datasets/WIKI/$TICKER.csv?'
-                        'api_key=Pz4pH-vyzazGW9961wYm&&limit={}'.format(self.nMostRecentDays))
-    def get_url_multi_tickers_template(self):
-        # return Template('https://www.quandl.com/api/v3/datatables/WIKI/PRICES.csv?date.gte={}'
-        #                 '&ticker=$TICKER&api_key=Pz4pH-vyzazGW9961wYm'.format(self.date))
-
-        return Template('https://www.quandl.com/api/v3/datatables/WIKI/PRICES.csv?date.lte={}&'
-                    'ticker=$TICKER&api_key=Pz4pH-vyzazGW9961wYm'.format(self.date))
-
-    def get_response_dataframe(self, ticker):
-        try:
-            response = self.get_response(ticker)
-            finalData = pd.read_csv(StringIO(response.content.decode('utf-8')))
-        except Exception as e:
-            raise e
-        data_util.normalize_col_names(finalData)
-        finalData = data_util.make_asc_date_order_quandl(finalData)
-        return finalData
+        dataframe = pd.read_csv(StringIO(response.content.decode('utf-8')))
+        data_util.normalize_col_names(dataframe)
+        return dataframe
 
     def convert_csv_to_dataframe(self, csv):
         self.data = [row for row in csv.reader(csv.splitlines())]
@@ -50,6 +29,25 @@ class QuandlRequest:
         self.data_frame = pd.DataFrame(self.data, columns=headers)
         self.data_frame[['open', 'high', 'low', 'close', 'volume', 'adj. close']] = \
             self.data_frame[['open', 'high', 'low', 'close', 'volume', 'adj. close']].apply(pd.to_numeric)
+
+
+class QuandlRequest(DataRequest):
+    def __init__(self):
+        self.nMostRecentDays = 60
+        self.date = 20170101
+        self.one_ticker_request_url_template = Template('https://www.quandl.com/api/v3/datasets/WIKI/$TICKER.csv?'
+                        'api_key=Pz4pH-vyzazGW9961wYm&&limit={}'.format(self.nMostRecentDays))
+
+        self.multi_tickers_request_url_template = Template('https://www.quandl.com/api/v3/datatables/WIKI/PRICES.csv?date.gte={}'
+                        '&ticker=$TICKER&api_key=Pz4pH-vyzazGW9961wYm'.format(self.date))
+
+
+class AlphavantageRequest(DataRequest):
+    def __init__(self):
+        self.one_ticker_request_url_template = Template('https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=$TICKER&datatype=csv&apikey=JF9VBJJRM1YDXH2W')
+
+
+
 
 
 

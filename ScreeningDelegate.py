@@ -1,14 +1,15 @@
 import logging
 import traceback, sys
-from simpleRequest import QuandlRequest
+from simpleRequest import QuandlRequest, AlphavantageRequest
 from ScreeningDepartment import ScreeningDepartment
 import Utilities.DataPrepUtil as data_util
 class ScreeningDelegate:
     def __init__(self):
-        self.request_handler = QuandlRequest()
+        self.request_handler = AlphavantageRequest()
         self.response = []
         self.screeners_list = []
         self.screening_department = ScreeningDepartment()
+
 
 
     """ given array of screeners and tickers, use all screener on each ticker"""
@@ -16,16 +17,13 @@ class ScreeningDelegate:
         logging.info("Begin to screen all tickers {} through {}".format( tickers_arr, screeners_json_list))
         self.screening_department.init_screener_list(screeners_json_list)
         #request stock data for all tickers
-        all_tickers_dataframe = self.fetchStockData(tickers_arr)
-        #segmentate into dataframes by per stock
-        all_tickers_dataframe_dict = data_util.segmentate_df_by_ticker(all_tickers_dataframe)
 
         result = {}
-        for ticker in all_tickers_dataframe_dict.keys():
+        for ticker in tickers_arr:
             logging.info("========={}=========".format(ticker))
             try:
-                ticker_dataframe = all_tickers_dataframe_dict[ticker]
-                if not ticker_dataframe.empty:
+                ticker_dataframe = self.request_handler.fetch_historical_time_series(ticker)
+                if not ticker_dataframe.empty and len(ticker_dataframe.index) > 1 :
                     tick, screened_result_list = self.screening_department.run_all_screener_on_ticker(
                         ticker, ticker_dataframe)
                     result[ticker] = screened_result_list

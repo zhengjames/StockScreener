@@ -293,14 +293,13 @@ class ForcastAlgorithms:
         data_frame.y contains the index 0,1,2,3..
     """
 
-    def predict_cross_zero_macd(self, data_frame, min_num_previous_data=2, trigger_direction=CONSTANT.ABOVE,
-                                algorithm='LINEAR'):
+    def predict_cross_zero_macd(self, data_frame, trigger_direction):
         logging.info("Begin predict cross {} zero".format(trigger_direction))
 
         pattern_to_prepare = CONSTANT.ASCENDING if trigger_direction == CONSTANT.ABOVE else CONSTANT.DESCENDING
 
         x, y = DataPrepUtil.extract_most_recent_asc_desc_xy(
-            data_frame, min_num_previous_data=min_num_previous_data, pattern=pattern_to_prepare)
+            data_frame, min_num_previous_data=CONSTANT.MIN_NUM_PREVIOUS_DATA, pattern=pattern_to_prepare)
         # if either x or y is empty
         if len(x) == 0 or len(y) == 0:
             return INVALID_PREDICTION
