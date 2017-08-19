@@ -58,8 +58,11 @@ def enable_cors_after_request_hook():
     add_cors_headers()
 
 def add_cors_headers():
+
+    '''allow only this ip address'''
+    allowed_url = 'http://127.0.0.1:' + bottle.request.environ['HTTP_ORIGIN'][-4:]
     bottle.response.headers['Access-Control-Allow-Credentials'] = 'true'
-    bottle.response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+    bottle.response.headers['Access-Control-Allow-Origin'] = allowed_url
     bottle.response.headers['Access-Control-Allow-Methods'] = \
         'GET, POST, PUT, OPTIONS'
     bottle.response.headers['Access-Control-Allow-Headers'] = \
