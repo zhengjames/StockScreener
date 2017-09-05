@@ -22,6 +22,7 @@ class ScreeningDelegate:
         for ticker in tickers_arr:
             logging.info("========={}=========".format(ticker))
             try:
+                #fetch historical stock data through web services
                 ticker_dataframe = self.request_handler.fetch_historical_time_series(ticker)
                 if not ticker_dataframe.empty and len(ticker_dataframe.index) > 1 :
                     tick, screened_result_list = self.screening_department.run_all_screener_on_ticker(
