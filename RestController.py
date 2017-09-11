@@ -4,7 +4,7 @@ from simpleRequest import QuandlRequest
 from ScreeningDelegate import ScreeningDelegate
 import logging
 import json
-
+from bottledaemon import daemon_run
 
 request_handler = QuandlRequest()
 screening_delegate = ScreeningDelegate()
@@ -19,7 +19,7 @@ def lvambience():
     response.headers['Content-type'] = 'application/json'
     return '[1]'
 
-@post('/screen')
+@bottle.route('/screen', method='POST')
 def screen_stock():
 
     logging.info("received request on endpoint /screen")
@@ -71,3 +71,7 @@ def add_cors_headers():
 app = bottle.app()
 app.run(port=8070)
 # run(server='gunicorn', host='localhost', port=8070, debug=True, timeout=9999)
+# The following lines will call the BottleDaemon script and launch a daemon in the background.
+# if __name__ == "__main__":
+#     daemon_run()
+
