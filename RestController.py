@@ -4,7 +4,6 @@ from simpleRequest import QuandlRequest
 from ScreeningDelegate import ScreeningDelegate
 import logging
 import json
-from bottledaemon import daemon_run
 
 request_handler = QuandlRequest()
 screening_delegate = ScreeningDelegate()
@@ -63,7 +62,6 @@ def add_cors_headers():
     logging.info("printing cors request below")
     logging.info(request)
     allowed_url = 'http://127.0.0.1:' + bottle.request.environ['HTTP_ORIGIN'][-4:]
-    bottle.response.headers['Access-Control-Allow-Credentials'] = 'false'
     bottle.response.headers['Access-Control-Allow-Origin'] = '*'
     bottle.response.headers['Access-Control-Allow-Methods'] = \
         'GET, POST, PUT, OPTIONS'
