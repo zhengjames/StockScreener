@@ -63,8 +63,8 @@ def add_cors_headers():
     logging.info("printing cors request below")
     logging.info(request)
     allowed_url = 'http://127.0.0.1:' + bottle.request.environ['HTTP_ORIGIN'][-4:]
-    bottle.response.headers['Access-Control-Allow-Credentials'] = 'true'
-    bottle.response.headers['Access-Control-Allow-Origin'] = allowed_url
+    bottle.response.headers['Access-Control-Allow-Credentials'] = 'false'
+    bottle.response.headers['Access-Control-Allow-Origin'] = '*'
     bottle.response.headers['Access-Control-Allow-Methods'] = \
         'GET, POST, PUT, OPTIONS'
     bottle.response.headers['Access-Control-Allow-Headers'] = \
